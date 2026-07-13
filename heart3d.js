@@ -70,6 +70,51 @@ function tubeBetween(points, radius, colorHex) {
   return new THREE.Mesh(geo, makeStandardMat(colorHex));
 }
 
+/* 先細り（テーパー）する滑らかなチューブを作る。
+   本物の伝導路は「太いHis束 → 細い脚 → さらに細いプルキンエ」と
+   だんだん細くなるので、始点の半径 r0 から終点の半径 r1 へなめらかに細める。*/
+function taperedTube(points, r0, r1, colorHex, tubularSegments = 64, radialSegments = 9) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  const frames = curve.computeFrenetFrames(tubularSegments, false);
+  const positions = [], normals = [], indices = [];
+  for (let i = 0; i <= tubularSegments; i++) {
+    const u = i / tubularSegments;
+    const r = r0 + (r1 - r0) * u;
+    const P = curve.getPointAt(u);
+    const N = frames.normals[i];
+    const B = frames.binormals[i];
+    for (let j = 0; j <= radialSegments; j++) {
+      const v = (j / radialSegments) * Math.PI * 2;
+      const nrm = new THREE.Vector3()
+        .addScaledVector(N, Math.cos(v))
+        .addScaledVector(B, Math.sin(v))
+        .normalize();
+      positions.push(P.x + nrm.x * r, P.y + nrm.y * r, P.z + nrm.z * r);
+      normals.push(nrm.x, nrm.y, nrm.z);
+    }
+  }
+  const cols = radialSegments + 1;
+  for (let i = 0; i < tubularSegments; i++) {
+    for (let j = 0; j < radialSegments; j++) {
+      const a = i * cols + j, b = (i + 1) * cols + j, c = (i + 1) * cols + j + 1, d = i * cols + j + 1;
+      indices.push(a, b, d, b, c, d);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+  geo.setIndex(indices);
+  return new THREE.Mesh(geo, makeStandardMat(colorHex));
+}
+
+/* ベクトル小道具（プルキンエ網の枝分かれ生成に使う） */
+function vadd(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+function vscale(a, s) { return [a[0] * s, a[1] * s, a[2] * s]; }
+function vnorm(a) {
+  const L = Math.hypot(a[0], a[1], a[2]) || 1;
+  return [a[0] / L, a[1] / L, a[2] / L];
+}
+
 function create(container, callbacks = {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xeef0f2);
@@ -156,59 +201,98 @@ function create(container, callbacks = {}) {
     return mesh;
   }
 
-  function nodeSphere(partId, pos, radius, range) {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 20), makeStandardMat(COLOR.conduction));
+  // 卵形のノード（洞結節・房室結節）。本物は球でなく細長い塊なので少しつぶす。
+  function nodeBlob(partId, pos, rx, ry, rz, range) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 20), makeStandardMat(COLOR.conduction));
+    m.scale.set(rx, ry, rz);
     m.position.set(...pos);
     m.renderOrder = 1;
     return registerMesh(partId, m, range);
   }
 
-  function nodeTube(partId, points, radius, range) {
-    const m = tubeBetween(points, radius, COLOR.conduction);
+  // 先細りチューブで1本の伝導路を作る
+  function nodeTaper(partId, points, r0, r1, range) {
+    const m = taperedTube(points, r0, r1, COLOR.conduction);
     m.renderOrder = 1;
     return registerMesh(partId, m, range);
   }
 
-  // 洞結節
-  nodeSphere("sa_node", NODES.sa, 0.11, ECG_TIMING.saFire);
-  // 心房内の伝導（洞結節→房室結節）と心房のふくらみを模式的に表現
-  nodeTube("atria", [NODES.sa, [0.35, 0.75, 0.4], [0.12, 0.4, 0.32], NODES.av], 0.04, ECG_TIMING.atriaConduct);
-  nodeTube("atria", [NODES.sa, [0.9, 0.85, 0.2], [0.7, 0.5, 0.0], [0.2, 0.35, 0.15]], 0.03, ECG_TIMING.atriaConduct);
-  nodeTube("atria", [NODES.sa, [-0.2, 0.95, 0.35], [-0.5, 0.7, 0.15], [-0.2, 0.45, 0.2]], 0.03, ECG_TIMING.atriaConduct);
-  // 房室結節
-  nodeSphere("av_node", NODES.av, 0.1, ECG_TIMING.avNodeDelay);
-  // His束
-  nodeTube("his_bundle", [NODES.av, NODES.his, NODES.hisEnd], 0.05, ECG_TIMING.hisBundle);
-  // 左脚
-  nodeTube("bundle_branch_l", [NODES.hisEnd, [-0.3, -0.7, 0.05], [-0.5, -1.2, -0.02], [-0.45, -1.55, -0.05]], 0.035, ECG_TIMING.bundleBranches);
-  // 右脚
-  nodeTube("bundle_branch_r", [NODES.hisEnd, [0.28, -0.7, 0.12], [0.45, -1.1, 0.08], [0.4, -1.4, 0.05]], 0.035, ECG_TIMING.bundleBranches);
+  /* ---- 心房内伝導（内結節路＋バッハマン束）＝解剖学的なルートに沿って ---- */
+  // 前結節路（洞結節→前方を回って房室結節へ）
+  nodeTaper("atria", [NODES.sa, [0.34, 0.78, 0.46], [0.14, 0.46, 0.36], [0.04, 0.3, 0.3], NODES.av], 0.045, 0.03, ECG_TIMING.atriaConduct);
+  // 中結節路（Wenckebach：後方寄りを通る）
+  nodeTaper("atria", [NODES.sa, [0.42, 0.72, 0.1], [0.28, 0.45, -0.02], [0.1, 0.3, 0.08], NODES.av], 0.035, 0.025, ECG_TIMING.atriaConduct);
+  // 後結節路（Thorel：右房外側の後下方を通る）
+  nodeTaper("atria", [NODES.sa, [0.7, 0.6, -0.1], [0.55, 0.3, -0.12], [0.22, 0.22, 0.0], NODES.av], 0.03, 0.022, ECG_TIMING.atriaConduct);
+  // バッハマン束（右房→左房へ橋渡し。左房の興奮の遅れ＝P波後半に対応）
+  nodeTaper("atria", [NODES.sa, [0.2, 1.05, 0.35], [-0.25, 0.98, 0.2], [-0.6, 0.78, 0.05], [-0.75, 0.55, -0.05]], 0.035, 0.02, ECG_TIMING.atriaConduct);
 
-  // プルキンエ線維（左右の心尖から放射状に広がる線）
-  const purkinjeMat = new THREE.LineBasicMaterial({ color: COLOR.conduction });
-  const purkinjeLines = [];
-  function addPurkinjeFan(origin, spread, count) {
-    for (let i = 0; i < count; i++) {
-      const ang = (i / (count - 1) - 0.5) * spread;
-      const end = [
-        origin[0] + Math.sin(ang) * 0.5,
-        origin[1] - 0.35 - Math.random() * 0.15,
-        origin[2] + Math.cos(ang) * 0.2 * (i % 2 === 0 ? 1 : -1),
-      ];
-      const geo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(...origin),
-        new THREE.Vector3(...end),
+  // 洞結節（右房上部・細長い紡錘形）
+  nodeBlob("sa_node", NODES.sa, 0.09, 0.16, 0.09, ECG_TIMING.saFire);
+  // 房室結節（心房中隔の底・小さな卵形）
+  nodeBlob("av_node", NODES.av, 0.12, 0.09, 0.09, ECG_TIMING.avNodeDelay);
+
+  /* ---- His束（貫通束）：房室結節から膜性中隔を貫いて心室中隔の頂へ ---- */
+  const hisTop = NODES.av;
+  const hisCrest = [0.0, -0.34, 0.08]; // 筋性中隔の頂（ここで左右脚に分岐）
+  nodeTaper("his_bundle", [hisTop, [0.0, 0.0, 0.16], NODES.his, hisCrest], 0.06, 0.045, ECG_TIMING.hisBundle);
+
+  /* ---- 右脚：細い1本の索状で中隔右側を心尖へ下り、右室前壁へ ---- */
+  const rbbEnd = [0.36, -1.5, 0.02];
+  nodeTaper(
+    "bundle_branch_r",
+    [hisCrest, [0.16, -0.6, 0.12], [0.3, -1.05, 0.1], [0.36, -1.35, 0.06], rbbEnd],
+    0.032, 0.02, ECG_TIMING.bundleBranches
+  );
+
+  /* ---- 左脚本幹：中隔左側へ短く抜けてすぐ前枝・後枝に分岐 ---- */
+  const lbbFork = [-0.16, -0.52, 0.0];
+  nodeTaper("bundle_branch_l", [hisCrest, [-0.08, -0.42, 0.05], lbbFork], 0.05, 0.038, ECG_TIMING.bundleBranches);
+  // 左脚前枝（前上側→前側壁上部。細い）
+  const lafEnd = [-0.52, -1.35, 0.12];
+  nodeTaper("lantfasc", [lbbFork, [-0.34, -0.85, 0.14], [-0.46, -1.15, 0.13], lafEnd], 0.028, 0.017, ECG_TIMING.bundleBranches);
+  // 左脚後枝（後下側→下後壁。太め）
+  const lpfEnd = [-0.48, -1.4, -0.16];
+  nodeTaper("lpostfasc", [lbbFork, [-0.36, -0.9, -0.12], [-0.45, -1.2, -0.15], lpfEnd], 0.034, 0.02, ECG_TIMING.bundleBranches);
+
+  /* ---- プルキンエ線維網：各脚の末端から、心室内膜に沿って枝分かれしながら
+     上方へ広がる細い網。再帰的に二又分岐させて“網”らしい密度を出す。---- */
+  const purkinjeMeshes = [];
+  let purkinjeBudget = 46; // 生成する枝の総数の上限（増やすと密になる）
+  function growPurkinje(start, dir, len, radius, depth) {
+    if (depth <= 0 || purkinjeBudget <= 0 || len < 0.12) return;
+    const d = vnorm(dir);
+    const mid = vadd(start, vadd(vscale(d, len * 0.5), [(Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.06]));
+    const end = vadd(start, vscale(d, len));
+    const tube = taperedTube([start, mid, end], radius, radius * 0.62, COLOR.conduction, 10, 6);
+    tube.userData.partId = "purkinje";
+    tube.renderOrder = 1;
+    conduction.add(tube);
+    purkinjeMeshes.push(tube);
+    purkinjeBudget--;
+    // 二又に分岐（心尖から上へ、内膜に沿って左右に開く）
+    const spread = 0.5 + Math.random() * 0.3;
+    const branch = (sign) => {
+      const nd = vnorm([
+        d[0] + sign * spread * (0.6 + Math.random() * 0.5),
+        d[1] * (0.7 + Math.random() * 0.3) + 0.15, // 上向き成分を足す
+        d[2] + sign * spread * 0.4 * (Math.random() - 0.2),
       ]);
-      const line = new THREE.Line(geo, purkinjeMat);
-      line.userData.partId = "purkinje";
-      line.renderOrder = 1;
-      conduction.add(line);
-      purkinjeLines.push(line);
-    }
+      growPurkinje(end, nd, len * (0.62 + Math.random() * 0.18), radius * 0.72, depth - 1);
+    };
+    branch(+1);
+    branch(-1);
   }
-  addPurkinjeFan([-0.45, -1.55, -0.05], 1.8, 8);
-  addPurkinjeFan([0.4, -1.4, 0.05], 1.6, 7);
-  parts["purkinje"] = { meshes: [], range: ECG_TIMING.purkinje, lines: purkinjeLines };
+  // 右室（右脚末端）から上方へ
+  growPurkinje(rbbEnd, [0.25, 0.55, 0.25], 0.42, 0.02, 4);
+  growPurkinje(rbbEnd, [0.4, 0.4, -0.1], 0.36, 0.018, 4);
+  // 左室 前枝末端
+  growPurkinje(lafEnd, [-0.25, 0.6, 0.2], 0.44, 0.02, 4);
+  // 左室 後枝末端
+  growPurkinje(lpfEnd, [-0.25, 0.6, -0.22], 0.44, 0.02, 4);
+  // 中隔側にも少し
+  growPurkinje([0.0, -1.55, 0.02], [0.05, 0.7, 0.1], 0.4, 0.018, 3);
+  parts["purkinje"] = { meshes: purkinjeMeshes, range: ECG_TIMING.purkinje };
 
   // ---- 弁（4つ・クリック可能な小さなリング） ----
   const valveDefs = [
@@ -228,13 +312,15 @@ function create(container, callbacks = {}) {
 
   // ---- 日本語ラベル（クリックで解説） ----
   const LABELS = [
-    { partId: "sa_node", text: "洞結節", pos: NODES.sa, off: [0.15, 0.15, 0] },
-    { partId: "av_node", text: "房室結節", pos: NODES.av, off: [0.35, 0.05, 0] },
-    { partId: "his_bundle", text: "His束", pos: [0.0, -0.15, 0.15], off: [0.3, 0, 0] },
-    { partId: "bundle_branch_l", text: "左脚", pos: [-0.45, -1.1, 0], off: [-0.35, 0, 0] },
-    { partId: "bundle_branch_r", text: "右脚", pos: [0.42, -1.0, 0.08], off: [0.3, 0, 0] },
-    { partId: "purkinje", text: "プルキンエ線維", pos: [-0.2, -1.75, 0], off: [0, -0.2, 0] },
-    { partId: "atria", text: "心房", pos: [0.15, 0.95, 0.3], off: [0, 0.2, 0] },
+    { partId: "sa_node", text: "洞結節", pos: NODES.sa, off: [0.2, 0.18, 0] },
+    { partId: "atria", text: "心房", pos: [0.15, 0.95, 0.3], off: [0, 0.22, 0] },
+    { partId: "av_node", text: "房室結節", pos: NODES.av, off: [0.4, 0.02, 0] },
+    { partId: "his_bundle", text: "His束", pos: [0.0, -0.15, 0.12], off: [0.32, 0, 0] },
+    { partId: "bundle_branch_l", text: "左脚", pos: [-0.16, -0.52, 0], off: [-0.28, 0.06, 0] },
+    { partId: "lantfasc", text: "左脚前枝", pos: [-0.5, -1.28, 0.12], off: [-0.28, 0.06, 0] },
+    { partId: "lpostfasc", text: "左脚後枝", pos: [-0.47, -1.36, -0.16], off: [-0.28, -0.14, 0] },
+    { partId: "bundle_branch_r", text: "右脚", pos: [0.34, -1.1, 0.06], off: [0.3, 0, 0] },
+    { partId: "purkinje", text: "プルキンエ線維", pos: [0.0, -1.7, 0], off: [0, -0.22, 0] },
   ];
   LABELS.forEach((L) => {
     const div = document.createElement("div");
@@ -294,7 +380,7 @@ function create(container, callbacks = {}) {
   }
 
   // ---- 発光の対象 ----
-  const repolTargets = ["bundle_branch_l", "bundle_branch_r", "purkinje"]; // 心室側（T波で青く）
+  const repolTargets = ["bundle_branch_l", "bundle_branch_r", "lantfasc", "lpostfasc", "purkinje"]; // 心室側（T波で青く）
 
   function setEmissive(mesh, hex, intensity) {
     if (!mesh.material || !mesh.material.emissive) return;
