@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c6e8e">
+<title>心臓立体マップ × 心電図 学習アプリ</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <button id="menuBtn" class="iconBtn" aria-label="メニュー">☰</button>
+  <div class="title">心臓立体マップ × 心電図</div>
+</header>
+
+<nav id="navDrawer" class="navDrawer hidden">
+  <button class="navItem" data-view="mainView">3D心臓＋12誘導心電図</button>
+  <button class="navItem" data-view="basicsView">基礎知識モード</button>
+  <button class="navItem" data-view="valvesView">弁膜症</button>
+  <button class="navItem" data-view="electrolyteView">電解質・薬剤性変化</button>
+  <button class="navItem" data-view="artifactView">アーチファクト</button>
+  <button class="navItem" data-view="glossaryView">用語集</button>
+  <button class="navItem" data-view="quizView">実践問題モード</button>
+</nav>
+<div id="navOverlay" class="navOverlay hidden"></div>
+
+<main id="app">
+
+  <!-- ============ メインビュー：3D心臓＋12誘導心電図 ============ -->
+  <section id="mainView" class="view">
+
+    <div class="patternBar">
+      <label for="patternSelect">波形パターン：</label>
+      <select id="patternSelect"></select>
+    </div>
+
+    <div id="explainPanel" class="explainPanel hidden">
+      <h2 id="expName"></h2>
+      <div id="expNameEn" class="expNameEn"></div>
+      <dl class="explainList">
+        <dt>概要</dt><dd id="expOverview"></dd>
+        <dt>心電図所見</dt><dd id="expFindings"></dd>
+        <dt>メカニズム</dt><dd id="expMechanism"></dd>
+        <dt>検定のポイント</dt><dd id="expExamPoints"></dd>
+        <dt>鑑別</dt><dd id="expSimilar"></dd>
+        <dt>緊急度</dt><dd id="expUrgency"></dd>
+      </dl>
+    </div>
+
+    <div class="sceneRow">
+      <div id="heartContainer" class="heartContainer" aria-label="3D心臓モデル（タップでパーツの解説）"></div>
+      <canvas id="ecgCanvas" class="ecgCanvas"></canvas>
+    </div>
+
+    <div class="playbackBar">
+      <button id="playPauseBtn" class="playBtn">⏸ 一時停止</button>
+      <label class="speedLabel">
+        再生速度
+        <input id="speedRange" type="range" min="0.25" max="2" step="0.25" value="1">
+        <span id="speedValue">1.0×</span>
+      </label>
+      <button id="stepBtn" class="stepBtn">1拍だけ進める</button>
+    </div>
+
+    <p class="hint">心臓モデルの部位（結節・弁など）をタップ／クリックすると解説が出ます。</p>
+  </section>
+
+  <!-- ============ 基礎知識モード ============ -->
+  <section id="basicsView" class="view hidden">
+    <h2>基礎知識モード</h2>
+    <div id="basicsContent"></div>
+  </section>
+
+  <!-- ============ 弁膜症（今後実装） ============ -->
+  <section id="valvesView" class="view hidden">
+    <h2>弁膜症</h2>
+    <p class="comingSoon">準備中です。弁膜症と心電図変化の対応は今後のフェーズで追加します。</p>
+  </section>
+
+  <!-- ============ 電解質・薬剤性変化（今後実装） ============ -->
+  <section id="electrolyteView" class="view hidden">
+    <h2>電解質・薬剤性変化</h2>
+    <p class="comingSoon">準備中です。電解質異常・薬剤による心電図変化は今後のフェーズで追加します。</p>
+  </section>
+
+  <!-- ============ アーチファクト（今後実装） ============ -->
+  <section id="artifactView" class="view hidden">
+    <h2>アーチファクト</h2>
+    <p class="comingSoon">準備中です。ノイズ・体動などによる偽異常波形の見分け方は今後のフェーズで追加します。</p>
+  </section>
+
+  <!-- ============ 用語集（今後実装） ============ -->
+  <section id="glossaryView" class="view hidden">
+    <h2>用語集</h2>
+    <p class="comingSoon">準備中です。用語の検索・分類表示は今後のフェーズで追加します。</p>
+  </section>
+
+  <!-- ============ 実践問題モード（今後実装） ============ -->
+  <section id="quizView" class="view hidden">
+    <h2>実践問題モード</h2>
+    <p class="comingSoon">準備中です。全モジュール横断の一問一答形式は今後のフェーズで追加します。</p>
+  </section>
+
+</main>
+
+<div id="partPopup" class="popup hidden">
+  <div class="popupCard">
+    <button id="popupClose" class="popupClose" aria-label="閉じる">✕</button>
+    <h3 id="popupTitle"></h3>
+    <p id="popupBody"></p>
+    <p id="popupExam" class="popupExam"></p>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

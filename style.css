@@ -1,0 +1,288 @@
+/* ============================================================
+   style.css
+   落ち着いた医療系配色（青緑＋白）。心電図エリアだけモニター風。
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #eef3f5;
+  color: #223;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- ヘッダー ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #2c6e8e;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.topbar .title {
+  font-weight: 600;
+  font-size: 16px;
+}
+.iconBtn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+/* ---------- ナビ ドロワー ---------- */
+.navDrawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(78vw, 300px);
+  background: #fff;
+  z-index: 40;
+  padding: 60px 0 20px;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+}
+.navItem {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 14px 20px;
+  font-size: 15px;
+  color: #223;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+.navItem:active { background: #f0f6f8; }
+.navOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 30;
+}
+
+/* ---------- メインレイアウト ---------- */
+#app {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px 14px 40px;
+}
+.view h2 {
+  font-size: 18px;
+  color: #2c6e8e;
+  margin: 4px 0 12px;
+}
+.comingSoon {
+  color: #667;
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+}
+
+/* ---------- パターン選択バー ---------- */
+.patternBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.patternBar select {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cdd8dc;
+  font-size: 14px;
+  background: #fff;
+}
+
+/* ---------- 解説パネル ---------- */
+.explainPanel {
+  background: #fff;
+  border: 1px solid #dce6e9;
+  border-left: 5px solid #2c6e8e;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.explainPanel h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+.expNameEn {
+  color: #789;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.explainList {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 12px;
+}
+.explainList dt {
+  font-weight: 600;
+  color: #2c6e8e;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.explainList dd {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* ---------- 3D心臓＋心電図 ---------- */
+.sceneRow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.heartContainer {
+  width: 100%;
+  height: 320px;
+  background: #f3f1ec;
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none;
+  border: 1px solid #dce6e9;
+}
+.heartContainer canvas { display: block; }
+
+.ecgCanvas {
+  width: 100%;
+  height: 340px;
+  background: #fff8f8;
+  border-radius: 12px;
+  border: 1px solid #e2b5c0;
+}
+
+@media (min-width: 800px) {
+  .sceneRow { flex-direction: row; }
+  .heartContainer { flex: 1; height: 420px; }
+  .ecgCanvas { flex: 1; height: 420px; }
+}
+
+/* ---------- 再生コントロール ---------- */
+.playbackBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #dce6e9;
+  font-size: 13.5px;
+}
+.playBtn, .stepBtn {
+  background: #2c6e8e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.playBtn:active, .stepBtn:active { background: #23596f; }
+.speedLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #445;
+}
+.speedLabel input[type="range"] { width: 120px; }
+
+.hint {
+  color: #789;
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+/* ---------- 基礎知識モード ---------- */
+.basicSection {
+  background: #fff;
+  border: 1px solid #dce6e9;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.basicSection h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #2c6e8e;
+}
+.basicSection p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.basicSection p:last-child { margin-bottom: 0; }
+
+/* ---------- パーツ解説ポップアップ ---------- */
+.popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+@media (min-width: 700px) {
+  .popup { align-items: center; }
+}
+.popupCard {
+  position: relative;
+  background: #fff;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px 16px 0 0;
+  padding: 22px 20px 26px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+@media (min-width: 700px) {
+  .popupCard { border-radius: 16px; }
+}
+.popupClose {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #667;
+}
+.popupCard h3 {
+  margin: 0 0 10px;
+  color: #2c6e8e;
+  font-size: 17px;
+}
+.popupCard p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 10px;
+}
+.popupExam {
+  background: #f0f6f8;
+  border-left: 4px solid #2c6e8e;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #345;
+}
