@@ -35,6 +35,9 @@ const COLOR = {
   repolarize: 0x4fa3ff,  // 再分極で光る色（青）
   damage: 0xff2d2d,      // 障害部位のハイライト色（赤）
   valve: 0xe8d59a,
+  oxyRed: 0xd23b3b,      // 高酸素（動脈血）＝赤：大動脈・肺静脈・左心系
+  deoxyBlue: 0x3b6fd2,   // 低酸素（静脈血）＝青：大静脈・肺動脈・右心系
+  coronary: 0xb5322b,    // 冠動脈（心臓表面を走る動脈）＝深い赤
 };
 
 /* ---------- 刺激伝導系の座標（心臓の高さを約3.6に正規化した空間） ----------
@@ -183,11 +186,44 @@ function create(container, callbacks = {}) {
     }
   );
 
-  // ---- 刺激伝導系（自作の作り込み） ----
-  const conduction = new THREE.Group();
-  // 教科書の前面像の慣例に合わせて左右反転（洞結節＝右房を画面の左側に）
-  conduction.scale.x = -1;
-  heartGroup.add(conduction);
+  // ---- 表示レイヤー（トグルで出し入れできる） ----
+  // すべて教科書の前面像に合わせて左右反転（患者の右側＝画面の左側）
+  const conduction = new THREE.Group();  // 刺激伝導系
+  const layerVessel = new THREE.Group();  // 大血管（動脈＝赤／静脈＝青）
+  const layerCoronary = new THREE.Group();// 冠動脈
+  const layerChamber = new THREE.Group(); // 部屋名ラベル（メッシュなし・文字だけ）
+  [conduction, layerVessel, layerCoronary, layerChamber].forEach((g) => {
+    g.scale.x = -1;
+    heartGroup.add(g);
+  });
+  const layers = { conduction, vessel: layerVessel, coronary: layerCoronary, chamber: layerChamber };
+  // 初期状態：伝導系と部屋名は表示、大血管・冠動脈は最初は隠す（ごちゃつき防止）
+  layerVessel.visible = false;
+  layerCoronary.visible = false;
+
+  // ---- ラベル管理（レイヤーごと＋全体の文字ON/OFF） ----
+  let labelsOn = true;
+  const labelRegistry = []; // { obj, layer }
+  function addLabel(text, partId, worldPos, off, parentGroup, layerName) {
+    const div = document.createElement("div");
+    div.className = "cLabel";
+    div.textContent = text;
+    div.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      if (callbacks.onPartClick) callbacks.onPartClick(partId);
+    });
+    const obj = new CSS2DObject(div);
+    obj.position.set(worldPos[0] + off[0], worldPos[1] + off[1], worldPos[2] + off[2]);
+    parentGroup.add(obj);
+    labelRegistry.push({ obj, layer: layerName });
+    return obj;
+  }
+  function refreshLabels() {
+    labelRegistry.forEach(({ obj, layer }) => {
+      const layerVisible = layers[layer] ? layers[layer].visible : true;
+      obj.visible = labelsOn && layerVisible;
+    });
+  }
 
   // 各パーツをまとめて管理（発光アニメ・障害ハイライト・クリックに使う）
   const parts = {}; // partId -> { meshes:[], baseColor, range, repol? }
@@ -310,30 +346,76 @@ function create(container, callbacks = {}) {
     conduction.add(m);
   });
 
-  // ---- 日本語ラベル（クリックで解説） ----
-  const LABELS = [
-    { partId: "sa_node", text: "洞結節", pos: NODES.sa, off: [0.2, 0.18, 0] },
-    { partId: "atria", text: "心房", pos: [0.15, 0.95, 0.3], off: [0, 0.22, 0] },
-    { partId: "av_node", text: "房室結節", pos: NODES.av, off: [0.4, 0.02, 0] },
-    { partId: "his_bundle", text: "His束", pos: [0.0, -0.15, 0.12], off: [0.32, 0, 0] },
-    { partId: "bundle_branch_l", text: "左脚", pos: [-0.16, -0.52, 0], off: [-0.28, 0.06, 0] },
-    { partId: "lantfasc", text: "左脚前枝", pos: [-0.5, -1.28, 0.12], off: [-0.28, 0.06, 0] },
-    { partId: "lpostfasc", text: "左脚後枝", pos: [-0.47, -1.36, -0.16], off: [-0.28, -0.14, 0] },
-    { partId: "bundle_branch_r", text: "右脚", pos: [0.34, -1.1, 0.06], off: [0.3, 0, 0] },
-    { partId: "purkinje", text: "プルキンエ線維", pos: [0.0, -1.7, 0], off: [0, -0.22, 0] },
-  ];
-  LABELS.forEach((L) => {
-    const div = document.createElement("div");
-    div.className = "cLabel";
-    div.textContent = L.text;
-    div.addEventListener("pointerdown", (e) => {
-      e.stopPropagation();
-      if (callbacks.onPartClick) callbacks.onPartClick(L.partId);
-    });
-    const obj = new CSS2DObject(div);
-    obj.position.set(L.pos[0] + L.off[0], L.pos[1] + L.off[1], L.pos[2] + L.off[2]);
-    conduction.add(obj);
-  });
+  // ======================================================================
+  //  大血管（動脈＝赤／静脈＝青。色は「酸素の有無」で分ける教科書式）
+  //  ※心臓の“上（base）”に生えている血管を模式的に色づけして表示。
+  // ======================================================================
+  function vesselTube(partId, points, r0, r1, colorHex) {
+    const m = taperedTube(points, r0, r1, colorHex, 48, 10);
+    m.userData.partId = partId;
+    m.renderOrder = 1;
+    layerVessel.add(m);
+    return m;
+  }
+  // 大動脈（左室から上行→弓部を患者の左へ）＝赤
+  vesselTube("aorta", [[0.02, 0.85, 0.0], [0.0, 1.4, -0.02], [-0.05, 1.75, -0.08], [-0.45, 1.78, -0.15], [-0.75, 1.55, -0.2]], 0.13, 0.1, COLOR.oxyRed);
+  // 肺動脈幹（右室から前を通って患者の左後方へ）＝青（中身は静脈血）
+  vesselTube("pa", [[-0.05, 0.9, 0.32], [-0.2, 1.35, 0.28], [-0.35, 1.62, 0.15], [-0.5, 1.7, -0.02]], 0.12, 0.09, COLOR.deoxyBlue);
+  // 上大静脈（患者の右上→右房）＝青
+  vesselTube("svc", [[0.5, 1.75, 0.0], [0.5, 1.35, 0.02], [0.48, 1.0, 0.05]], 0.1, 0.1, COLOR.deoxyBlue);
+  // 下大静脈（患者の右下→右房）＝青
+  vesselTube("ivc", [[0.5, 0.05, -0.05], [0.5, 0.35, 0.0], [0.48, 0.6, 0.05]], 0.1, 0.1, COLOR.deoxyBlue);
+  // 肺静脈（患者の左後方→左房、代表として2本）＝赤（中身は動脈血）
+  vesselTube("pv", [[-0.75, 1.05, -0.3], [-0.62, 0.9, -0.32], [-0.5, 0.8, -0.3]], 0.07, 0.07, COLOR.oxyRed);
+  vesselTube("pv", [[-0.75, 0.7, -0.35], [-0.6, 0.68, -0.34], [-0.48, 0.72, -0.3]], 0.07, 0.07, COLOR.oxyRed);
+
+  // ======================================================================
+  //  冠動脈（心臓表面を走る動脈。梗塞部位と心電図変化の対応学習に重要）
+  // ======================================================================
+  function coronaryTube(partId, points, r0, r1) {
+    const m = taperedTube(points, r0, r1, COLOR.coronary, 56, 8);
+    m.userData.partId = partId;
+    m.renderOrder = 1;
+    layerCoronary.add(m);
+    return m;
+  }
+  // 右冠動脈（大動脈起始→患者右の房室溝を下り、下壁へ回る）
+  coronaryTube("rca", [[0.1, 0.78, 0.28], [0.4, 0.55, 0.34], [0.55, 0.2, 0.3], [0.52, -0.25, 0.2], [0.3, -0.6, 0.05]], 0.05, 0.03);
+  // 左前下行枝（前面の前室間溝を心尖へ）
+  coronaryTube("lad", [[-0.02, 0.8, 0.36], [-0.05, 0.35, 0.44], [-0.07, -0.2, 0.44], [-0.06, -0.75, 0.34], [-0.03, -1.15, 0.2]], 0.05, 0.025);
+  // 左回旋枝（左房室溝を患者の左後方へ）
+  coronaryTube("lcx", [[-0.1, 0.78, 0.28], [-0.38, 0.6, 0.16], [-0.56, 0.28, -0.05], [-0.55, -0.05, -0.2]], 0.045, 0.025);
+
+  // ======================================================================
+  //  ラベル（クリックで解説）。レイヤーごとに登録して一括で出し入れできる。
+  // ======================================================================
+  // 刺激伝導系
+  addLabel("洞結節", "sa_node", NODES.sa, [0.2, 0.18, 0], conduction, "conduction");
+  addLabel("房室結節", "av_node", NODES.av, [0.4, 0.02, 0], conduction, "conduction");
+  addLabel("His束", "his_bundle", [0.0, -0.15, 0.12], [0.32, 0, 0], conduction, "conduction");
+  addLabel("左脚", "bundle_branch_l", [-0.16, -0.52, 0], [-0.28, 0.06, 0], conduction, "conduction");
+  addLabel("左脚前枝", "lantfasc", [-0.5, -1.28, 0.12], [-0.28, 0.06, 0], conduction, "conduction");
+  addLabel("左脚後枝", "lpostfasc", [-0.47, -1.36, -0.16], [-0.28, -0.16, 0], conduction, "conduction");
+  addLabel("右脚", "bundle_branch_r", [0.34, -1.1, 0.06], [0.3, 0, 0], conduction, "conduction");
+  addLabel("プルキンエ線維", "purkinje", [0.0, -1.7, 0], [0, -0.22, 0], conduction, "conduction");
+
+  // 部屋名（心房・心室）
+  addLabel("右心房", "ra", [0.55, 0.62, 0.25], [0.05, 0.12, 0], layerChamber, "chamber");
+  addLabel("左心房", "la", [-0.55, 0.72, -0.1], [-0.1, 0.12, 0], layerChamber, "chamber");
+  addLabel("右心室", "rv", [0.4, -0.6, 0.3], [0.18, -0.1, 0], layerChamber, "chamber");
+  addLabel("左心室", "lv", [-0.5, -0.7, 0.05], [-0.2, -0.1, 0], layerChamber, "chamber");
+
+  // 大血管
+  addLabel("大動脈", "aorta", [-0.55, 1.78, -0.15], [0, 0.14, 0], layerVessel, "vessel");
+  addLabel("肺動脈", "pa", [-0.45, 1.7, -0.02], [-0.16, 0.12, 0], layerVessel, "vessel");
+  addLabel("上大静脈", "svc", [0.5, 1.7, 0.0], [0.22, 0.08, 0], layerVessel, "vessel");
+  addLabel("下大静脈", "ivc", [0.5, 0.1, -0.05], [0.22, -0.08, 0], layerVessel, "vessel");
+  addLabel("肺静脈", "pv", [-0.72, 0.88, -0.32], [-0.18, 0, 0], layerVessel, "vessel");
+
+  // 冠動脈
+  addLabel("右冠動脈", "rca", [0.55, 0.2, 0.3], [0.24, 0.04, 0], layerCoronary, "coronary");
+  addLabel("左前下行枝", "lad", [-0.06, -0.4, 0.44], [-0.26, 0, 0], layerCoronary, "coronary");
+  addLabel("左回旋枝", "lcx", [-0.56, 0.28, -0.05], [-0.26, 0.06, 0], layerCoronary, "coronary");
 
   // ---- クリック／タップ判定（3Dメッシュ側） ----
   const raycaster = new THREE.Raycaster();
@@ -372,6 +454,7 @@ function create(container, callbacks = {}) {
   }
   window.addEventListener("resize", resize);
   resize();
+  refreshLabels(); // 初期のラベル表示状態を反映
 
   // ---- 障害部位のハイライト（疾患ごとに「どこが傷んでいるか」を赤く示す） ----
   let damagedIds = [];
@@ -436,6 +519,14 @@ function create(container, callbacks = {}) {
     update,
     resize,
     setDamage,
+    // 文字ラベル全体の出し入れ（心臓の絵を見たいときにOFFにできる）
+    setLabelsVisible(v) { labelsOn = !!v; refreshLabels(); },
+    // レイヤー（conduction / vessel / coronary / chamber）ごとの出し入れ
+    setLayerVisible(name, v) {
+      if (layers[name]) layers[name].visible = !!v;
+      refreshLabels();
+    },
+    isLayerVisible(name) { return layers[name] ? layers[name].visible : false; },
     flashPart(partId, ms = 1200) {
       const p = parts[partId];
       if (!p) return;

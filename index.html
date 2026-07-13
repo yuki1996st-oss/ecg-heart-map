@@ -61,6 +61,15 @@
       <canvas id="ecgCanvas" class="ecgCanvas"></canvas>
     </div>
 
+    <div class="layerBar" id="layerBar">
+      <span class="layerBarTitle">表示切替：</span>
+      <label class="layerToggle"><input type="checkbox" id="tgLabels" checked> 文字ラベル</label>
+      <label class="layerToggle"><input type="checkbox" id="tgConduction" checked> 刺激伝導系</label>
+      <label class="layerToggle"><input type="checkbox" id="tgChamber" checked> 部屋名</label>
+      <label class="layerToggle"><input type="checkbox" id="tgVessel"> 大血管（赤=動脈/青=静脈）</label>
+      <label class="layerToggle"><input type="checkbox" id="tgCoronary"> 冠動脈</label>
+    </div>
+
     <div class="playbackBar">
       <button id="playPauseBtn" class="playBtn">⏸ 一時停止</button>
       <label class="speedLabel">

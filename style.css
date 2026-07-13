@@ -195,6 +195,34 @@ html, body {
   .ecgCanvas { flex: 1; height: 420px; }
 }
 
+/* ---------- 表示レイヤー切替バー ---------- */
+.layerBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #dce6e9;
+  font-size: 13px;
+}
+.layerBarTitle {
+  font-weight: 600;
+  color: #2c6e8e;
+}
+.layerToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #334;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 4px;
+}
+.layerToggle input { width: 16px; height: 16px; accent-color: #2c6e8e; }
+
 /* ---------- 再生コントロール ---------- */
 .playbackBar {
   display: flex;

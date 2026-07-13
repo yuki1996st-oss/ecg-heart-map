@@ -47,6 +47,20 @@ const heart = createHeart(heartContainer, {
   },
 });
 
+/* ---------- 表示レイヤー切替（文字ラベル・伝導系・部屋名・大血管・冠動脈） ---------- */
+const toggleMap = {
+  tgLabels: (on) => heart.setLabelsVisible(on),
+  tgConduction: (on) => heart.setLayerVisible("conduction", on),
+  tgChamber: (on) => heart.setLayerVisible("chamber", on),
+  tgVessel: (on) => heart.setLayerVisible("vessel", on),
+  tgCoronary: (on) => heart.setLayerVisible("coronary", on),
+};
+Object.entries(toggleMap).forEach(([id, fn]) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("change", () => fn(el.checked));
+});
+
 /* ---------- 12誘導心電図の初期化 ---------- */
 const ecgCanvas = document.getElementById("ecgCanvas");
 const ecgRenderer = createEcgRenderer(ecgCanvas);
