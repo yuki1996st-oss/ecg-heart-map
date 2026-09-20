@@ -13,7 +13,7 @@ from moomoo import TrdEnv
 
 
 def main() -> None:
-    c.assert_paper()
+    c.warn_if_real()
 
     c.hr("1. 設定の確認")
     print(f"  取引モード : {config.TRD_ENV}  （SIMULATE = 模擬＝仮想のお金）")
@@ -40,7 +40,7 @@ def main() -> None:
         print(sim[["acc_id", "trd_env", "acc_type", "trdmarket_auth"]].to_string(index=False))
 
         info = c.unwrap(
-            t.accinfo_query(trd_env=config.TRD_ENV, currency="JPY"),
+            t.accinfo_query(trd_env=config.TRD_ENV, currency=c.acc_currency()),
             "口座残高の取得",
         )
         r = info.iloc[0]

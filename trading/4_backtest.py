@@ -8,8 +8,9 @@
       （ゴールデンクロス／デッドクロス）
 
 使い方:
-    python3 4_backtest.py                 ← サンプルデータで実行
-    python3 4_backtest.py data/JP_7203.csv ← 取得した実データで実行
+    python3 4_backtest.py                  ← サンプルデータで実行
+    python3 4_backtest.py data/US_AAPL.csv ← 取得した実データ1銘柄で実行
+    python3 4_backtest.py --all            ← data/ の全銘柄を比較する
 """
 
 import json
@@ -121,7 +122,51 @@ def run(df: pd.DataFrame) -> dict:
 
 
 # ---------------------------------------------------------------
+def compare_all() -> None:
+    """data/ にある全 CSV をまとめて検証し、横並びで比べる。"""
+    files = sorted(
+        f for f in os.listdir(os.path.join(HERE, "data"))
+        if f.endswith(".csv") and f != "sample_daily.csv"
+    )
+    if not files:
+        sys.exit("data/ に CSV がありません。先に 3_fetch_history.py を実行してください。")
+
+    print("\n" + "=" * 72)
+    print(f"  銘柄ごとの比較　（{config.SMA_SHORT}日 / {config.SMA_LONG}日 クロス）")
+    print("=" * 72)
+    print(f"  {'銘柄':<12}{'総リターン':>12}{'ずっと保有':>12}"
+          f"{'最大DD':>10}{'取引':>7}{'勝率':>8}")
+    print("-" * 72)
+
+    rows = []
+    for fn in files:
+        try:
+            r = run(load(os.path.join(HERE, "data", fn)))
+        except SystemExit as e:
+            print(f"  {fn:<12} {e}")
+            continue
+        m = r["metrics"]
+        name = fn.replace(".csv", "").replace("US_", "")
+        rows.append((name, m))
+        print(f"  {name:<12}{m['total_return_pct']:>11.2f}%"
+              f"{m['buyhold_return_pct']:>11.2f}%"
+              f"{m['max_drawdown_pct']:>9.1f}%"
+              f"{m['trade_count']:>6}回{m['win_rate_pct']:>7.0f}%")
+
+    print("=" * 72)
+    beat = [n for n, m in rows if m["total_return_pct"] > m["buyhold_return_pct"]]
+    print(f"  「ずっと保有」に勝てたのは {len(beat)} / {len(rows)} 銘柄"
+          + (f"（{', '.join(beat)}）" if beat else ""))
+    print("\n  ※ これは過去の話です。勝てた銘柄が今後も勝つ保証はありません。")
+    print("     勝率より、最大DD（途中で耐える下落幅）を見てください。")
+    print("\n  グラフで見たい銘柄は:  python3 4_backtest.py data/US_XXXX.csv\n")
+
+
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+        compare_all()
+        return
+
     path = sys.argv[1] if len(sys.argv) > 1 else SAMPLE
     if not os.path.exists(path):
         sys.exit(f"ファイルが見つかりません: {path}")

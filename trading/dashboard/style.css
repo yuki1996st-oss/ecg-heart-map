@@ -301,3 +301,89 @@ footer p { margin: 0; }
   .tile-value { font-size: 19px; }
   main { padding-left: 16px; padding-right: 16px; }
 }
+
+/* ---------- 売買サインのカード ---------- */
+.sig-list { display: grid; gap: 10px; }
+
+.sig-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: start;
+  padding: 13px 15px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+}
+.sig-card.buy  { border-left-color: var(--good); }
+.sig-card.sell { border-left-color: var(--warning); }
+.sig-card.stop { border-left-color: var(--critical); }
+.sig-card.info { border-left-color: var(--axis); }
+
+.sig-tag {
+  grid-row: 1 / span 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+.sig-card.buy  .sig-tag { color: var(--good-text); }
+.sig-card.sell .sig-tag { color: var(--text-secondary); }
+.sig-card.stop .sig-tag { color: var(--critical); }
+.sig-card.info .sig-tag { color: var(--text-muted); }
+
+.sig-head { font-size: 15px; font-weight: 650; }
+.sig-head .sig-price {
+  font-weight: 450;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.sig-reason { font-size: 13px; color: var(--text-secondary); }
+.sig-action {
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 10px;
+  margin-top: 3px;
+}
+.sig-action b { font-variant-numeric: tabular-nums; }
+
+.sig-quiet {
+  padding: 18px 15px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* 見張っている銘柄の一覧（サインが出ていないものも含む） */
+.watch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.watch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: var(--surface-1);
+}
+.watch-chip .trend { font-size: 11px; }
+.watch-chip .up { color: var(--good-text); }
+.watch-chip .down { color: var(--critical); }

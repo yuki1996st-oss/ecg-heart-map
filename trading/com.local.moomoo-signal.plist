@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  毎朝 7:30 に 6_signal_check.py を自動実行する設定。
+  __TRADING_DIR__ を、このフォルダの実際のパスに置き換えてから使います。
+  手順は README の「毎朝の自動チェック」を見てください。
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.local.moomoo-signal</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__TRADING_DIR__/run_signal_check.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__TRADING_DIR__</string>
+
+  <!-- 毎日 7:30（米国市場が閉じたあと） -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>7</integer>
+    <key>Minute</key><integer>30</integer>
+  </dict>
+
+  <!-- MacBook がスリープしていて実行できなかった場合、起きたときに実行する -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>__TRADING_DIR__/logs/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__TRADING_DIR__/logs/launchd.err.log</string>
+</dict>
+</plist>

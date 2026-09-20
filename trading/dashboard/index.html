@@ -20,6 +20,17 @@
 
 <main>
 
+  <!-- ============ 今日のサイン ============ -->
+  <section aria-labelledby="h-signals">
+    <h2 id="h-signals">今日のサイン</h2>
+    <p class="updated" id="sigUpdated"></p>
+    <div id="signalList"></div>
+    <p class="note">
+      このページも、サインを出すスクリプトも、<strong>注文は出しません</strong>。
+      売買する場合は moomoo アプリでご自身で確認してから行ってください。
+    </p>
+  </section>
+
   <!-- ============ 模擬口座 ============ -->
   <section aria-labelledby="h-account">
     <h2 id="h-account">模擬口座のいま</h2>
@@ -111,6 +122,7 @@
 </footer>
 
 <!-- Python が書き出すデータ。まだ無い場合もあるので onerror で握りつぶす -->
+<script src="signals_data.js" onerror="window.__noSignals=true"></script>
 <script src="portfolio_data.js" onerror="window.__noPortfolio=true"></script>
 <script src="backtest_data.js" onerror="window.__noBacktest=true"></script>
 <script src="app.js"></script>

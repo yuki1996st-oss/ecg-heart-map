@@ -52,7 +52,94 @@
   });
 
   /* =========================================================
-     1. 模擬口座
+     1. 今日のサイン
+     ========================================================= */
+  (function renderSignals() {
+    const host = $("signalList");
+    const sg = window.SIGNALS;
+
+    if (!sg) {
+      host.appendChild(el("div", "sig-quiet",
+        "まだサインを確認していません。ターミナルで 6_signal_check.py を実行すると、ここに出ます。"));
+      return;
+    }
+
+    const m = sg.meta;
+    $("sigUpdated").textContent =
+      `最終確認 ${m.checked_at}　/　${m.rule}　/　`
+      + `${m.watchlist_size}銘柄を監視　/　1銘柄あたり上限 ${yen(m.budget_per_stock_jpy)} 円`;
+
+    const KIND = {
+      BUY:  { cls: "buy",  icon: "●", text: "買い候補" },
+      SELL: { cls: "sell", icon: "■", text: "売り候補" },
+      STOP: { cls: "stop", icon: "▲", text: "損切り検討" },
+      INFO: { cls: "info", icon: "－", text: "見送り" },
+    };
+
+    const list = el("div", "sig-list");
+    const acts = sg.signals.filter((s) => s.kind !== "INFO");
+
+    if (!sg.signals.length) {
+      list.appendChild(el("div", "sig-quiet",
+        "今日は売買のサインなし。何もしなくて大丈夫です。"));
+    }
+
+    sg.signals.forEach((s) => {
+      const k = KIND[s.kind] || KIND.INFO;
+      const card = el("div", "sig-card " + k.cls);
+
+      const tag = el("span", "sig-tag");
+      tag.appendChild(el("span", null, k.icon));
+      tag.appendChild(el("span", null, k.text));
+      card.appendChild(tag);
+
+      const head = el("div", "sig-head", s.code.replace("US.", ""));
+      const jpy = s.price * m.usdjpy;
+      head.appendChild(el("span", "sig-price",
+        `$${s.price.toFixed(2)}　約 ${yen(jpy)} 円`));
+      card.appendChild(head);
+
+      card.appendChild(el("div", "sig-reason", s.reason));
+
+      if (s.kind === "BUY") {
+        const a = el("div", "sig-action");
+        a.innerHTML =
+          `買うなら <b>${s.qty}</b> 株　＝　約 <b>${yen(jpy * s.qty)}</b> 円`
+          + `　／　損切りの目安 <b>$${(s.price * (1 - m.stop_loss_pct / 100)).toFixed(2)}</b>`;
+        card.appendChild(a);
+      } else if (s.kind === "SELL" || s.kind === "STOP") {
+        const a = el("div", "sig-action");
+        const cls = sign(s.pnl_pct);
+        a.innerHTML = `保有 <b>${s.qty}</b> 株　／　損益 `
+          + `<b class="${cls}">${arrow(s.pnl_pct)} ${pct(s.pnl_pct)}</b>`;
+        card.appendChild(a);
+      } else {
+        card.appendChild(el("div", "sig-action", "様子を見ます。"));
+      }
+      list.appendChild(card);
+    });
+    host.appendChild(list);
+
+    // 見張っている銘柄ぜんぶの状態
+    if (sg.watchlist && sg.watchlist.length) {
+      const row = el("div", "watch-row");
+      sg.watchlist.forEach((w) => {
+        const chip = el("span", "watch-chip");
+        chip.appendChild(el("span", null, w.code.replace("US.", "")));
+        chip.appendChild(el("span", null, `$${w.price.toFixed(2)}`));
+        const t = el("span", "trend " + (w.trend_up ? "up" : "down"),
+          w.trend_up ? "▲ 上昇" : "▼ 下降");
+        chip.appendChild(t);
+        row.appendChild(chip);
+      });
+      host.appendChild(row);
+    }
+
+    if (acts.length) document.title = `(${acts.length}) 模擬取引ダッシュボード`;
+  })();
+
+  /* =========================================================
+     2. 模擬口座
      ========================================================= */
   (function renderAccount() {
     const tiles = $("accTiles");
@@ -107,7 +194,7 @@
   })();
 
   /* =========================================================
-     2. バックテスト
+     3. バックテスト
      ========================================================= */
   const bt = window.BACKTEST;
   let chart = null;
@@ -206,7 +293,7 @@
   })();
 
   /* =========================================================
-     3. 折れ線グラフ（SVG を手で組み立てる）
+     4. 折れ線グラフ（SVG を手で組み立てる）
      ========================================================= */
   function makeChart(host, tip, s) {
     const NS = "http://www.w3.org/2000/svg";

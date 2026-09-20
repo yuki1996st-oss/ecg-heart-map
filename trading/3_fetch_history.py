@@ -5,10 +5,13 @@
 注文は出しません。
 
 使い方:
-    python3 3_fetch_history.py
+    python3 3_fetch_history.py              ← config.py の WATCHLIST 全部
+    python3 3_fetch_history.py US.AAPL      ← 銘柄を指定する場合
 """
 
 import os
+import sys
+import time
 
 import pandas as pd
 from moomoo import AuType
@@ -19,42 +22,55 @@ import config
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
+def fetch_one(quote_ctx, code: str) -> bool:
+    frames = []
+    page_key = None
+    while True:
+        ret, data, page_key = quote_ctx.request_history_kline(
+            code=code,
+            start=config.HISTORY_START,
+            end=config.HISTORY_END,
+            ktype=config.HISTORY_KTYPE,
+            autype=AuType.QFQ,       # 株式分割などを調整した価格
+            max_count=1000,
+            page_req_key=page_key,
+        )
+        if ret != 0:
+            print(f"  {code:10s} 失敗: {data}")
+            return False
+        frames.append(data)
+        if page_key is None:
+            break
+
+    df = pd.concat(frames, ignore_index=True)
+    out = os.path.join(DATA_DIR, f"{code.replace('.', '_')}.csv")
+    df.to_csv(out, index=False)
+    print(f"  {code:10s} {len(df):>5} 本 → {os.path.basename(out)}")
+    return True
+
+
 def main() -> None:
     os.makedirs(DATA_DIR, exist_ok=True)
 
-    c.hr(f"{config.TEST_CODE} の過去データを取得")
-    print(f"  期間 : {config.HISTORY_START} 〜 {config.HISTORY_END}")
+    codes = sys.argv[1:] or config.WATCHLIST
 
-    frames = []
-    page_key = None
+    c.hr("過去データを取得")
+    print(f"  期間   : {config.HISTORY_START} 〜 {config.HISTORY_END}")
+    print(f"  対象   : {len(codes)} 銘柄\n")
 
+    ok = 0
     with c.quote_context() as q:
-        while True:
-            ret, data, page_key = q.request_history_kline(
-                code=config.TEST_CODE,
-                start=config.HISTORY_START,
-                end=config.HISTORY_END,
-                ktype=config.HISTORY_KTYPE,
-                autype=AuType.QFQ,       # 株式分割などを調整した価格
-                max_count=1000,
-                page_req_key=page_key,
-            )
-            if ret != 0:
-                print(f"\n【失敗】過去データの取得\n       {data}\n{c.HINT}")
-                print("  ※ 権限が無くても大丈夫です。サンプルデータで")
-                print("     4_backtest.py を試せます。")
-                return
-            frames.append(data)
-            print(f"  ... {len(data)} 本 取得")
-            if page_key is None:
-                break
+        for code in codes:
+            if fetch_one(q, code):
+                ok += 1
+            time.sleep(0.6)      # API への配慮
 
-    df = pd.concat(frames, ignore_index=True)
-    out = os.path.join(DATA_DIR, f"{config.TEST_CODE.replace('.', '_')}.csv")
-    df.to_csv(out, index=False)
-
-    print(f"\n  合計 {len(df)} 本を保存しました")
-    print(f"  保存先: {out}\n")
+    print(f"\n  {ok} / {len(codes)} 銘柄を保存しました（保存先: {DATA_DIR}）")
+    if ok < len(codes):
+        print(f"{c.HINT}")
+        print("  ※ 取れない銘柄があっても、サンプルデータで")
+        print("     4_backtest.py の動作は確認できます。")
+    print()
 
 
 if __name__ == "__main__":

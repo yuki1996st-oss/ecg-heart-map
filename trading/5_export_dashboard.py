@@ -20,18 +20,18 @@ OUT_JS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 def main() -> None:
-    c.assert_paper()
+    c.warn_if_real()
 
     c.hr("模擬口座の状況を読み取り中")
 
     with c.trade_context() as t:
         info = c.unwrap(
-            t.accinfo_query(trd_env=config.TRD_ENV, currency="JPY"),
+            t.accinfo_query(trd_env=config.TRD_ENV, currency=c.acc_currency()),
             "口座残高の取得",
         ).iloc[0]
 
         pos = c.unwrap(
-            t.position_list_query(trd_env=config.TRD_ENV, currency="JPY"),
+            t.position_list_query(trd_env=config.TRD_ENV, currency=c.acc_currency()),
             "保有銘柄の取得",
         )
 

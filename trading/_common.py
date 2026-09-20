@@ -17,15 +17,33 @@ import config
 
 
 # ---------------------------------------------------------------
-# 安全装置：模擬取引以外では走らせない
+# 安全装置
 # ---------------------------------------------------------------
+# このフォルダで「注文を出せる」スクリプトは 2_paper_order.py だけです。
+# そこは assert_paper() で模擬取引に固定してあります。
+# ほかのスクリプトは読むだけなので、本番口座でも安全に動かせますが、
+# どちらの口座を見ているかが分かるように warn_if_real() で知らせます。
+
 def assert_paper() -> None:
+    """注文を出すスクリプト用。模擬取引でなければ即座に止める。"""
     if config.TRD_ENV != TrdEnv.SIMULATE:
         sys.exit(
             "\n【中止】config.py の TRD_ENV が SIMULATE になっていません。\n"
             f"       現在の値: {config.TRD_ENV}\n"
-            "       このフォルダのスクリプトは模擬取引専用です。\n"
+            "       注文を出すスクリプトは模擬取引でしか動かしません。\n"
+            "       本番の売買は moomoo アプリから手で行ってください。\n"
         )
+
+
+def warn_if_real() -> None:
+    """読み取り専用スクリプト用。本番口座を見ているときに知らせる。"""
+    if config.TRD_ENV == TrdEnv.SIMULATE:
+        print("\n  [模擬口座] 仮想のお金を見ています。")
+    else:
+        print("\n" + "!" * 56)
+        print("  本番口座（実際のお金）の情報を見ています。")
+        print("  ※ このスクリプトは読むだけで、注文は出しません。")
+        print("!" * 56)
 
 
 # ---------------------------------------------------------------
@@ -73,6 +91,16 @@ HINT = """
   3. config.py の TRD_MARKET / SECURITY_FIRM が口座と合っていない
   4. 株価データの取得権限がない（相場データの権限を口座側で確認）
 """
+
+
+def acc_currency() -> str:
+    """口座残高を問い合わせるときの通貨。米国株の口座は USD で見ます。"""
+    return "USD" if str(config.TRD_MARKET) == "US" else "JPY"
+
+
+def to_jpy(usd: float) -> float:
+    """表示用のざっくり円換算（config.USDJPY_ASSUMED を使用）。"""
+    return usd * config.USDJPY_ASSUMED
 
 
 def hr(title: str = "") -> None:
