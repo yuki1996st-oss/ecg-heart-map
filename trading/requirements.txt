@@ -1,0 +1,4 @@
+# moomoo 公式 Python SDK（OpenAPI 用）
+moomoo-api>=10.11
+# 表計算のような処理に使います（SDK が内部でも使用）
+pandas>=2.0

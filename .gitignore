@@ -1,2 +1,11 @@
 .claude/
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# ダッシュボード用に書き出される個人データ（口座情報）は Git に入れない
+trading/dashboard/portfolio_data.js

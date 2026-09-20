@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>模擬取引ダッシュボード</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>模擬取引ダッシュボード</h1>
+  <span class="badge badge-paper" id="envBadge">模擬・仮想のお金</span>
+  <button id="themeToggle" class="theme-toggle" type="button" aria-label="表示テーマを切り替え">◐</button>
+</header>
+
+<p class="readonly-note">
+  このページは<strong>見るだけ</strong>です。ここから注文を出す機能はありません。
+</p>
+
+<main>
+
+  <!-- ============ 模擬口座 ============ -->
+  <section aria-labelledby="h-account">
+    <h2 id="h-account">模擬口座のいま</h2>
+    <p class="updated" id="accUpdated"></p>
+
+    <div class="tiles" id="accTiles"></div>
+
+    <h3>保有銘柄</h3>
+    <div class="table-wrap">
+      <table id="posTable">
+        <thead>
+          <tr>
+            <th scope="col">銘柄</th>
+            <th scope="col" class="num">株数</th>
+            <th scope="col" class="num">取得単価</th>
+            <th scope="col" class="num">現在値</th>
+            <th scope="col" class="num">評価額</th>
+            <th scope="col" class="num">損益</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ バックテスト ============ -->
+  <section aria-labelledby="h-backtest">
+    <h2 id="h-backtest">バックテスト（過去データでの検証）</h2>
+    <div id="sampleWarn" class="warn" hidden>
+      <span class="warn-icon" aria-hidden="true">▲</span>
+      <span><strong>これはダミーのデータです。</strong>実在の銘柄の値動きではないので、
+      この成績には何の意味もありません。仕組みの確認用です。</span>
+    </div>
+    <p class="updated" id="btMeta"></p>
+
+    <div class="tiles" id="btTiles"></div>
+
+    <figure class="chart-figure viz-root">
+      <figcaption>
+        <span class="fig-title">資産の推移</span>
+        <span class="fig-sub" id="figSub"></span>
+      </figcaption>
+
+      <div class="legend" id="legend"></div>
+      <div class="chart-host" id="chartHost">
+        <div class="tooltip" id="tooltip" role="status" aria-live="polite" hidden></div>
+      </div>
+
+      <button class="link-btn" id="tableToggle" type="button" aria-expanded="false">
+        数字の表で見る
+      </button>
+      <div class="table-wrap" id="seriesTableWrap" hidden>
+        <table id="seriesTable">
+          <thead>
+            <tr>
+              <th scope="col">日付</th>
+              <th scope="col" class="num">戦略</th>
+              <th scope="col" class="num">ずっと保有</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="note" id="seriesTableNote"></p>
+      </div>
+    </figure>
+
+    <h3>売買の記録</h3>
+    <div class="table-wrap">
+      <table id="tradeTable">
+        <thead>
+          <tr>
+            <th scope="col">買った日</th>
+            <th scope="col" class="num">買値</th>
+            <th scope="col">売った日</th>
+            <th scope="col" class="num">売値／現在値</th>
+            <th scope="col" class="num">損益</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>moomoo OpenAPI の模擬取引から書き出したデータを表示しています。
+  データはこの MacBook の中だけにあり、どこにも送信されません。</p>
+</footer>
+
+<!-- Python が書き出すデータ。まだ無い場合もあるので onerror で握りつぶす -->
+<script src="portfolio_data.js" onerror="window.__noPortfolio=true"></script>
+<script src="backtest_data.js" onerror="window.__noBacktest=true"></script>
+<script src="app.js"></script>
+</body>
+</html>
