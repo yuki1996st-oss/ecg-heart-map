@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c6e8e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="嚥下評価">
+<meta name="referrer" content="no-referrer">
+<title>嚥下評価アプリ（院内用）</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button id="menuBtn" class="iconBtn" aria-label="メニュー">☰</button>
+  <div class="title">嚥下評価アプリ</div>
+  <div class="topbarSpacer"></div>
+  <span class="offlineBadge" title="入力内容は外部に送信されません">端末内保存</span>
+</header>
+
+<nav id="navDrawer" class="navDrawer hidden">
+  <button class="navItem" data-view="assessView">新規評価・入力</button>
+  <button class="navItem" data-view="listView">記録一覧・書き出し</button>
+  <button class="navItem" data-view="refView">早見表</button>
+  <button class="navItem" data-view="helpView">使い方・注意事項</button>
+</nav>
+<div id="navOverlay" class="navOverlay hidden"></div>
+
+<main id="app">
+
+  <!-- ============ 新規評価 ============ -->
+  <section id="assessView" class="view">
+
+    <p id="disclaimer" class="disclaimer"></p>
+
+    <!-- ---- 基本情報 ---- -->
+    <details class="card" open>
+      <summary>1. 基本情報</summary>
+      <div class="cardBody">
+        <p class="warnLine">氏名は入力しないでください（患者ID・イニシャルのみ）。</p>
+        <div class="grid2">
+          <label class="field">評価日
+            <input type="date" data-field="date">
+          </label>
+          <label class="field">患者ID／イニシャル
+            <input type="text" data-field="patientId" placeholder="例）12345 / A.B." maxlength="20">
+          </label>
+          <label class="field">年齢
+            <input type="number" data-field="age" min="0" max="120" inputmode="numeric" placeholder="歳">
+          </label>
+          <label class="field">性別
+            <select data-field="sex">
+              <option value="">選択</option>
+              <option value="男">男</option>
+              <option value="女">女</option>
+              <option value="其他">その他・未記載</option>
+            </select>
+          </label>
+          <label class="field">評価者
+            <input type="text" data-field="assessor" placeholder="例）ST 〇〇" maxlength="30">
+          </label>
+          <label class="field">病棟・部屋
+            <input type="text" data-field="ward" placeholder="例）3A-301" maxlength="20">
+          </label>
+        </div>
+        <label class="field">主病名・病態
+          <input type="text" data-field="diagnosis" placeholder="例）左中大脳動脈領域の脳梗塞（発症3日目）" maxlength="80">
+        </label>
+        <div class="grid2">
+          <label class="field">意識レベル
+            <select data-field="consciousness"></select>
+          </label>
+          <label class="field">現在の栄養摂取経路
+            <select data-field="nutritionRoute"></select>
+          </label>
+          <label class="field">評価時の姿勢
+            <select data-field="posture"></select>
+          </label>
+          <label class="field">体温（℃）
+            <input type="number" data-field="temperature" step="0.1" min="30" max="43" inputmode="decimal" placeholder="例）36.8">
+          </label>
+          <label class="field">SpO2 安静時（%）
+            <input type="number" data-field="spo2Rest" min="50" max="100" inputmode="numeric" placeholder="例）97">
+          </label>
+          <label class="field">SpO2 テスト中の最低値（%）
+            <input type="number" data-field="spo2Min" min="50" max="100" inputmode="numeric" placeholder="例）95">
+          </label>
+          <label class="field">身長（cm）
+            <input type="number" data-field="height" step="0.1" min="80" max="220" inputmode="decimal">
+          </label>
+          <label class="field">体重（kg）
+            <input type="number" data-field="weight" step="0.1" min="10" max="200" inputmode="decimal">
+          </label>
+        </div>
+        <p id="bmiLine" class="calcLine"></p>
+      </div>
+    </details>
+
+    <!-- ---- 実施前の安全チェック ---- -->
+    <details class="card" open>
+      <summary>2. 実施前の安全チェック</summary>
+      <div class="cardBody">
+        <p class="note">スクリーニングを始める前に確認します。ひとつでも欠ける場合は、無理に実施せず条件を整えてから行ってください。</p>
+        <div id="safetyChecks" class="checkList"></div>
+        <p id="safetyResult" class="resultLine"></p>
+      </div>
+    </details>
+
+    <!-- ---- 問診 ---- -->
+    <details class="card">
+      <summary>3. 問診（EAT-10 ／ 聖隷式嚥下質問紙）※本人が答えられる場合</summary>
+      <div class="cardBody">
+        <h3 class="subhead">EAT-10</h3>
+        <p id="eat10Note" class="note"></p>
+        <div id="eat10Items" class="scaleList"></div>
+        <p id="eat10Result" class="resultLine"></p>
+
+        <h3 class="subhead">聖隷式嚥下質問紙</h3>
+        <p id="seireiNote" class="note"></p>
+        <div id="seireiItems" class="scaleList"></div>
+        <p id="seireiResult" class="resultLine"></p>
+      </div>
+    </details>
+
+    <!-- ---- 口腔 ---- -->
+    <details class="card">
+      <summary>4. 口腔の評価（OHAT-J ／ 口腔運動）</summary>
+      <div class="cardBody">
+        <h3 class="subhead">OHAT-J</h3>
+        <p id="ohatNote" class="note"></p>
+        <div id="ohatItems" class="scaleList"></div>
+        <p id="ohatResult" class="resultLine"></p>
+
+        <h3 class="subhead">オーラルディアドコキネシス（5秒間の回数）</h3>
+        <p id="odkNote" class="note"></p>
+        <div class="grid3">
+          <label class="field">パ（回／5秒）
+            <input type="number" data-field="odkPa" min="0" max="80" inputmode="numeric">
+          </label>
+          <label class="field">タ（回／5秒）
+            <input type="number" data-field="odkTa" min="0" max="80" inputmode="numeric">
+          </label>
+          <label class="field">カ（回／5秒）
+            <input type="number" data-field="odkKa" min="0" max="80" inputmode="numeric">
+          </label>
+        </div>
+        <p id="odkResult" class="resultLine"></p>
+        <label class="field">口腔所見のメモ
+          <textarea data-field="oralMemo" rows="2" placeholder="例）舌の左側偏位あり、義歯不適合、口腔乾燥著明"></textarea>
+        </label>
+      </div>
+    </details>
+
+    <!-- ---- スクリーニング ---- -->
+    <details class="card" open>
+      <summary>5. ベッドサイド・スクリーニング</summary>
+      <div class="cardBody">
+
+        <h3 class="subhead">RSST（反復唾液嚥下テスト）</h3>
+        <p id="rsstNote" class="note"></p>
+        <label class="field inlineField">30秒間の嚥下回数
+          <input type="number" data-field="rsst" min="0" max="20" inputmode="numeric" placeholder="回">
+        </label>
+        <p id="rsstResult" class="resultLine"></p>
+
+        <h3 class="subhead">MWST（改訂水飲みテスト・冷水3mL）</h3>
+        <p id="mwstNote" class="note"></p>
+        <div id="mwstChoices" class="radioList"></div>
+        <p id="mwstResult" class="resultLine"></p>
+
+        <h3 class="subhead">FT（フードテスト）</h3>
+        <p id="ftNote" class="note"></p>
+        <div id="ftChoices" class="radioList"></div>
+        <p id="ftResult" class="resultLine"></p>
+
+        <h3 class="subhead">30mL水飲みテスト（窪田法）</h3>
+        <p id="wst30Note" class="note"></p>
+        <div id="wst30Choices" class="radioList"></div>
+        <div class="grid2">
+          <label class="field">所要時間（秒）
+            <input type="number" data-field="wst30Time" min="0" max="120" step="0.5" inputmode="decimal">
+          </label>
+        </div>
+        <p id="wst30Result" class="resultLine"></p>
+
+        <h3 class="subhead">咳テスト（クエン酸ネブライザー）</h3>
+        <div id="coughChoices" class="radioList"></div>
+
+        <h3 class="subhead">頸部聴診</h3>
+        <div id="auscItems" class="checkList"></div>
+
+        <h3 class="subhead">観察された症状</h3>
+        <div id="signItems" class="checkList"></div>
+
+        <label class="field">スクリーニングのメモ
+          <textarea data-field="screenMemo" rows="2" placeholder="例）ゼリーは問題なし。とろみなしの水分で湿性嗄声あり"></textarea>
+        </label>
+      </div>
+    </details>
+
+    <!-- ---- 総合評価 ---- -->
+    <details class="card" open>
+      <summary>6. 重症度・摂取レベルの判定</summary>
+      <div class="cardBody">
+        <h3 class="subhead">DSS（摂食嚥下障害臨床的重症度分類）</h3>
+        <div id="dssChoices" class="radioList"></div>
+
+        <h3 class="subhead">藤島 摂食嚥下能力グレード（Gr）</h3>
+        <div id="gradeChoices" class="radioList compact"></div>
+
+        <h3 class="subhead">FILS（摂食状況のレベル）</h3>
+        <div id="filsChoices" class="radioList compact"></div>
+
+        <h3 class="subhead">FOIS（任意）</h3>
+        <div id="foisChoices" class="radioList compact"></div>
+      </div>
+    </details>
+
+    <!-- ---- 食形態・プラン ---- -->
+    <details class="card" open>
+      <summary>7. 食形態・対応プラン</summary>
+      <div class="cardBody">
+        <h3 class="subhead">食事（学会分類2021）</h3>
+        <div id="dietChoices" class="radioList"></div>
+
+        <h3 class="subhead">水分のとろみ（学会分類2021）</h3>
+        <div id="thickChoices" class="radioList"></div>
+
+        <h3 class="subhead">代償法・食事条件</h3>
+        <div id="compItems" class="checkList"></div>
+
+        <h3 class="subhead">訓練メニュー</h3>
+        <div id="trainItems" class="checkList"></div>
+
+        <label class="field">今後の方針・特記事項
+          <textarea data-field="planMemo" rows="3" placeholder="例）明日よりコード2-1・中間とろみで昼のみ開始。1週間後に再評価。VE依頼を検討。"></textarea>
+        </label>
+      </div>
+    </details>
+
+    <!-- ---- 判定サマリー ---- -->
+    <section class="card summaryCard" id="summaryCard">
+      <div class="cardBody">
+        <h3 class="subhead">判定・サマリー（自動）</h3>
+        <div id="riskBanner" class="riskBanner">入力すると、ここに目安が表示されます。</div>
+        <ul id="findingList" class="findingList"></ul>
+        <h3 class="subhead">カルテ貼り付け用テキスト</h3>
+        <textarea id="reportText" class="reportText" rows="14" readonly></textarea>
+        <div class="btnRow">
+          <button id="copyBtn" class="btn primary">カルテ用テキストをコピー</button>
+          <button id="saveBtn" class="btn primary">この評価を保存</button>
+          <button id="printBtn" class="btn">印刷・PDF</button>
+          <button id="clearBtn" class="btn danger">入力をクリア</button>
+        </div>
+        <p id="saveStatus" class="resultLine"></p>
+      </div>
+    </section>
+
+  </section>
+
+  <!-- ============ 記録一覧 ============ -->
+  <section id="listView" class="view hidden">
+    <h2>記録一覧</h2>
+    <p class="note">この端末のブラウザ内にのみ保存されています。患者IDごとにまとまって表示されます。</p>
+    <div class="btnRow">
+      <button id="csvBtn" class="btn">CSVで書き出す</button>
+      <button id="jsonBtn" class="btn">JSONバックアップ</button>
+      <button id="importBtn" class="btn">JSONを読み込む</button>
+      <button id="wipeBtn" class="btn danger">保存データを全部消す</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+    <div id="recordList" class="recordList"></div>
+  </section>
+
+  <!-- ============ 早見表 ============ -->
+  <section id="refView" class="view hidden">
+    <h2>早見表</h2>
+    <div id="refContent"></div>
+  </section>
+
+  <!-- ============ 使い方 ============ -->
+  <section id="helpView" class="view hidden">
+    <h2>使い方・注意事項</h2>
+    <div id="helpContent"></div>
+  </section>
+
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+/* ============================================================
+   style.css（嚥下評価アプリ）
+   病棟でiPhone片手でも押しやすいように、余白とタップ領域を広めに。
+   配色は心電図アプリと同じ青緑系で揃えています。
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #eef3f5;
+  color: #223;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- ヘッダー ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: #2c6e8e;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.topbar .title { font-weight: 600; font-size: 17px; }
+.topbarSpacer { flex: 1; }
+.offlineBadge {
+  font-size: 11px;
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.iconBtn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+/* ---------- メニュー ---------- */
+.navDrawer {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 78%;
+  max-width: 300px;
+  background: #fff;
+  z-index: 40;
+  padding: calc(16px + env(safe-area-inset-top)) 0 16px;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+  overflow-y: auto;
+}
+.navItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #e3eaee;
+  padding: 16px 20px;
+  font-size: 16px;
+  color: #1d4d66;
+  cursor: pointer;
+}
+.navItem:active { background: #e7f1f6; }
+.navOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 30;
+}
+
+/* ---------- 全体レイアウト ---------- */
+#app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 14px 12px calc(40px + env(safe-area-inset-bottom));
+}
+h2 { font-size: 19px; margin: 6px 0 12px; color: #1d4d66; }
+.subhead {
+  font-size: 15px;
+  margin: 20px 0 6px;
+  padding-left: 8px;
+  border-left: 4px solid #2c6e8e;
+  color: #1d4d66;
+}
+.subhead:first-of-type { margin-top: 4px; }
+
+.disclaimer {
+  background: #fff8e6;
+  border: 1px solid #e8d08a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #6b5518;
+  margin: 0 0 12px;
+}
+.warnLine {
+  color: #a3341f;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.note {
+  font-size: 13px;
+  color: #55707d;
+  margin: 4px 0 10px;
+}
+.helpBody { font-size: 14px; margin: 0; }
+
+/* ---------- カード（折りたたみ） ---------- */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+.card > summary {
+  padding: 14px 16px;
+  font-weight: 600;
+  color: #1d4d66;
+  cursor: pointer;
+  background: #f3f8fa;
+  list-style: none;
+  position: relative;
+  padding-right: 40px;
+}
+.card > summary::-webkit-details-marker { display: none; }
+.card > summary::after {
+  content: "▼";
+  position: absolute;
+  right: 16px;
+  font-size: 11px;
+  color: #6b8b99;
+  transition: transform 0.15s;
+}
+.card[open] > summary::after { transform: rotate(180deg); }
+.cardBody { padding: 12px 16px 18px; }
+.summaryCard { border: 2px solid #2c6e8e; }
+
+/* ---------- 入力欄 ---------- */
+.field {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #40606e;
+}
+.field input,
+.field select,
+.field textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  font-size: 16px; /* iOSで勝手に拡大しないように16px以上 */
+  font-family: inherit;
+  color: #223;
+  background: #fff;
+  border: 1px solid #c3d3db;
+  border-radius: 8px;
+}
+.field textarea { resize: vertical; }
+.inlineField { max-width: 220px; }
+.grid2, .grid3 { display: grid; gap: 0 12px; }
+.grid2 { grid-template-columns: 1fr 1fr; }
+.grid3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 480px) {
+  .grid2 { grid-template-columns: 1fr; }
+}
+
+/* ---------- チェックボックス ---------- */
+.checkList { display: flex; flex-direction: column; gap: 2px; }
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.checkItem:active { background: #eef6fa; }
+.checkItem input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: #2c6e8e; }
+
+/* ---------- ラジオボタン ---------- */
+.radioList { display: flex; flex-direction: column; gap: 2px; }
+.radioItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.radioItem:active { background: #eef6fa; }
+.radioItem input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: #2c6e8e; }
+.radioItem small { display: block; color: #6b8b99; font-size: 12px; margin-top: 2px; }
+.radioItem.compactItem { padding: 8px; font-size: 13px; }
+.radioItem:has(input:checked),
+.radioItem.isChecked { background: #e3f0f6; }
+
+.linkBtn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #2c6e8e;
+  font-size: 13px;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.linkBtn.danger { color: #a3341f; }
+
+/* ---------- 質問＋点数チップ（EAT-10など） ---------- */
+.scaleList { display: flex; flex-direction: column; gap: 10px; }
+.scaleItem {
+  border: 1px solid #e0e9ee;
+  border-radius: 8px;
+  padding: 10px;
+}
+.scaleQ { font-size: 14px; margin-bottom: 8px; }
+.scaleNo {
+  display: inline-block;
+  min-width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  background: #2c6e8e;
+  color: #fff;
+  border-radius: 11px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+.scaleChoices { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #c3d3db;
+  border-radius: 18px;
+  font-size: 13px;
+  background: #fff;
+  cursor: pointer;
+  min-height: 38px;
+}
+.chip input {
+  position: absolute;
+  opacity: 0;
+  width: 100%; height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.chip:has(input:checked),
+.chip.isChecked {
+  background: #2c6e8e;
+  border-color: #2c6e8e;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---------- 判定の表示 ---------- */
+.resultLine {
+  font-size: 13px;
+  margin: 8px 0 0;
+  min-height: 1em;
+}
+.resultLine.ok { color: #1d6b4f; }
+.resultLine.warn { color: #a3341f; font-weight: 600; }
+.calcLine { font-size: 13px; color: #40606e; margin: 4px 0 0; }
+
+.riskBanner {
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  background: #eef3f5;
+  color: #55707d;
+}
+.riskBanner.high { background: #fdeaea; color: #a3201f; border: 1px solid #e3a5a5; }
+.riskBanner.mid { background: #fff5e2; color: #8a5a12; border: 1px solid #e3c68a; }
+.riskBanner.low { background: #e9f6ee; color: #1d6b4f; border: 1px solid #a5d3ba; }
+
+.findingList { list-style: none; padding: 0; margin: 12px 0 0; }
+.finding {
+  position: relative;
+  padding: 8px 10px 8px 30px;
+  font-size: 14px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  background: #f7fafb;
+}
+.finding::before {
+  position: absolute;
+  left: 9px;
+  top: 8px;
+}
+.finding.high { background: #fdeaea; }
+.finding.high::before { content: "⚠️"; }
+.finding.mid { background: #fff5e2; }
+.finding.mid::before { content: "△"; color: #8a5a12; }
+.finding.low::before { content: "・"; color: #55707d; }
+.finding.advice { background: #eef4f8; }
+.finding.advice::before { content: "→"; color: #2c6e8e; }
+
+.reportText {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px;
+  border: 1px solid #c3d3db;
+  border-radius: 8px;
+  background: #fbfdfe;
+  color: #223;
+}
+
+/* ---------- ボタン ---------- */
+.btnRow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.btn {
+  flex: 1 1 auto;
+  min-width: 130px;
+  min-height: 46px;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  border-radius: 8px;
+  border: 1px solid #c3d3db;
+  background: #fff;
+  color: #1d4d66;
+  cursor: pointer;
+}
+.btn:active { background: #e7f1f6; }
+.btn.primary { background: #2c6e8e; border-color: #2c6e8e; color: #fff; }
+.btn.primary:active { background: #245b77; }
+.btn.danger { color: #a3341f; border-color: #d9b3ab; }
+
+/* ---------- 表 ---------- */
+.refTable, .recordTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.refTable th, .refTable td,
+.recordTable th, .recordTable td {
+  border-bottom: 1px solid #e3eaee;
+  padding: 10px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+.refTable th { width: 38%; color: #1d4d66; font-weight: 600; }
+@media (max-width: 520px) {
+  .refTable th, .refTable td { display: block; width: auto; border: none; padding: 2px 0; }
+  .refTable td { padding-bottom: 12px; border-bottom: 1px solid #e3eaee; }
+}
+.recordTable td:nth-child(2) { font-size: 13px; color: #40606e; }
+.rowBtns { white-space: nowrap; text-align: right; }
+.badge {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 6px;
+  color: #fff;
+}
+.badge.high { background: #c0392b; }
+.badge.mid { background: #d6902a; }
+.badge.low { background: #2f8a63; }
+
+/* ---------- 印刷（PDF保存） ---------- */
+@media print {
+  .topbar, .navDrawer, .navOverlay, .btnRow, .linkBtn, .disclaimer { display: none !important; }
+  body { background: #fff; font-size: 11pt; }
+  #app { max-width: none; padding: 0; }
+  .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+  .card > summary { background: #f0f0f0; }
+  .reportText { height: auto; border: none; }
+}
