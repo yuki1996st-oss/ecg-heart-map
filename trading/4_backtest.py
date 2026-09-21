@@ -39,7 +39,8 @@ def load(path: str) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------
-def run(df: pd.DataFrame) -> dict:
+def run(df: pd.DataFrame, fee_rate: float | None = None) -> dict:
+    fee = config.FEE_RATE if fee_rate is None else fee_rate
     short, long = config.SMA_SHORT, config.SMA_LONG
     if len(df) < long + 5:
         sys.exit(f"データが短すぎます（{len(df)}本）。長期移動平均 {long} 本ぶん以上必要です。")
@@ -53,7 +54,7 @@ def run(df: pd.DataFrame) -> dict:
 
     df["ret"] = df["close"].pct_change().fillna(0.0)
     df["trade"] = df["hold"].diff().abs().fillna(0.0)          # 売買が起きた日は 1
-    df["strategy_ret"] = df["hold"] * df["ret"] - df["trade"] * config.FEE_RATE
+    df["strategy_ret"] = df["hold"] * df["ret"] - df["trade"] * fee
 
     cash = config.INITIAL_CASH
     df["equity"] = cash * (1 + df["strategy_ret"]).cumprod()
@@ -87,11 +88,14 @@ def run(df: pd.DataFrame) -> dict:
     peak = df["equity"].cummax()
     max_dd = float(((df["equity"] - peak) / peak).min() * 100)
 
-    years = max(len(df) / 252.0, 1e-9)
+    d0 = pd.to_datetime(df["date"].iloc[0])
+    d1 = pd.to_datetime(df["date"].iloc[-1])
+    years = max((d1 - d0).days / 365.25, 1e-9)
     final = float(df["equity"].iloc[-1])
     total_ret = (final / cash - 1) * 100
     cagr = ((final / cash) ** (1 / years) - 1) * 100 if final > 0 else -100.0
     bh_final = float(df["buyhold"].iloc[-1])
+    bh_cagr = ((bh_final / cash) ** (1 / years) - 1) * 100 if bh_final > 0 else -100.0
 
     return {
         "meta": {
@@ -100,7 +104,7 @@ def run(df: pd.DataFrame) -> dict:
             "period": f"{df['date'].iloc[0]} 〜 {df['date'].iloc[-1]}",
             "bars": len(df),
             "initial_cash": config.INITIAL_CASH,
-            "fee_rate_pct": config.FEE_RATE * 100,
+            "fee_rate_pct": round(fee * 100, 4),
         },
         "metrics": {
             "total_return_pct": round(total_ret, 2),
@@ -111,6 +115,8 @@ def run(df: pd.DataFrame) -> dict:
             "final_equity": round(final),
             "buyhold_return_pct": round((bh_final / cash - 1) * 100, 2),
             "buyhold_final": round(bh_final),
+            "buyhold_cagr_pct": round(bh_cagr, 2),
+            "years": round(years, 2),
         },
         "series": {
             "dates": df["date"].tolist(),
@@ -134,31 +140,39 @@ def compare_all() -> None:
     print("\n" + "=" * 72)
     print(f"  銘柄ごとの比較　（{config.SMA_SHORT}日 / {config.SMA_LONG}日 クロス）")
     print("=" * 72)
-    print(f"  {'銘柄':<12}{'総リターン':>12}{'ずっと保有':>12}"
-          f"{'最大DD':>10}{'取引':>7}{'勝率':>8}")
+    print("  ※ 期間が違う銘柄どうしを比べられるよう、年率に直しています。")
+    print("-" * 72)
+    print(f"  {'銘柄':<12}{'期間':>8}{'年率':>10}{'保有の年率':>12}"
+          f"{'最大DD':>10}{'取引':>7}{'勝率':>7}")
     print("-" * 72)
 
     rows = []
     for fn in files:
+        is_crypto = fn.startswith("CRYPTO_")
+        fee = config.FEE_RATE_CRYPTO if is_crypto else config.FEE_RATE
         try:
-            r = run(load(os.path.join(HERE, "data", fn)))
+            r = run(load(os.path.join(HERE, "data", fn)), fee_rate=fee)
         except SystemExit as e:
             print(f"  {fn:<12} {e}")
             continue
         m = r["metrics"]
-        name = fn.replace(".csv", "").replace("US_", "")
+        name = fn.replace(".csv", "").replace("US_", "").replace("CRYPTO_", "*")
         rows.append((name, m))
-        print(f"  {name:<12}{m['total_return_pct']:>11.2f}%"
-              f"{m['buyhold_return_pct']:>11.2f}%"
+        print(f"  {name:<12}{m['years']:>6.1f}年{m['cagr_pct']:>9.1f}%"
+              f"{m['buyhold_cagr_pct']:>11.1f}%"
               f"{m['max_drawdown_pct']:>9.1f}%"
-              f"{m['trade_count']:>6}回{m['win_rate_pct']:>7.0f}%")
+              f"{m['trade_count']:>6}回{m['win_rate_pct']:>6.0f}%")
 
     print("=" * 72)
-    beat = [n for n, m in rows if m["total_return_pct"] > m["buyhold_return_pct"]]
+    if any(n.startswith("*") for n, _ in rows):
+        print(f"  * = 仮想通貨（手数料 {config.FEE_RATE_CRYPTO * 100}% で計算。"
+              f"株は {config.FEE_RATE * 100}%）")
+    beat = [n for n, m in rows if m["cagr_pct"] > m["buyhold_cagr_pct"]]
     print(f"  「ずっと保有」に勝てたのは {len(beat)} / {len(rows)} 銘柄"
           + (f"（{', '.join(beat)}）" if beat else ""))
     print("\n  ※ これは過去の話です。勝てた銘柄が今後も勝つ保証はありません。")
     print("     勝率より、最大DD（途中で耐える下落幅）を見てください。")
+    print("     年率が高くても最大DDが深ければ、途中で耐えられません。")
     print("\n  グラフで見たい銘柄は:  python3 4_backtest.py data/US_XXXX.csv\n")
 
 
@@ -196,7 +210,7 @@ def main() -> None:
     print(f"  勝率                 : {m['win_rate_pct']:>12} %")
     print("-" * 56)
     print(f"  参考：ずっと持っていた場合 {m['buyhold_return_pct']} %"
-          f"（{m['buyhold_final']:,} 円）")
+          f"（年率 {m['buyhold_cagr_pct']} % / {m['buyhold_final']:,} 円）")
     print("=" * 56)
 
     os.makedirs(os.path.dirname(OUT_JS), exist_ok=True)

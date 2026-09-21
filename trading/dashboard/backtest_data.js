@@ -11,13 +11,15 @@ window.BACKTEST = {
  },
  "metrics": {
   "total_return_pct": 81.4,
-  "cagr_pct": 18.15,
+  "cagr_pct": 18.89,
   "max_drawdown_pct": -14.93,
   "trade_count": 5,
   "win_rate_pct": 60.0,
   "final_equity": 181402,
   "buyhold_return_pct": -3.8,
-  "buyhold_final": 96198
+  "buyhold_final": 96198,
+  "buyhold_cagr_pct": -1.12,
+  "years": 3.44
  },
  "series": {
   "dates": [
